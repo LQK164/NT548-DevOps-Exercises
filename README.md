@@ -15,7 +15,7 @@ Tải AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-
 
 Tải Terraform: https://developer.hashicorp.com/terraform/install?product_intent=terraform
 
-Cách lấy Access key và Secret key trên tài khoản AWS: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html
+Hướng dẫn lấy Access key và Secret key trên tài khoản AWS: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html
 
 Thêm Access key và Secret key trên Terminal:
 ```console
