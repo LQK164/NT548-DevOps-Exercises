@@ -21,7 +21,7 @@ Thêm Access key và Secret key trên Terminal:
 ```console
 username@linux:~$ aws configure 
 AWS Access Key ID [None]:
-AWS Secret Access Key [****************None]:
+AWS Secret Access Key [None]:
 Default region name [None]:
 Default output format [None]:  
 ```
