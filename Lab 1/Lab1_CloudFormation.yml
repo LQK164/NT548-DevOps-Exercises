@@ -145,7 +145,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
-          CidrIp:  171.250.165.100/32 # User's IP
+          CidrIp:  123.250.165.100/32 # User's IP
 ################################################
 
 #####Security Group for EC2 Private Instance#####
