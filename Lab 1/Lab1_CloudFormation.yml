@@ -60,6 +60,22 @@ Resources:
           Value: !Join ['', [!Ref "AWS::StackName", "-Pri-SubNet"]]
 ########################
 
+#####Default Security Group######
+DefaultSecurityGroup:
+  Type: AWS::EC2::SecurityGroup
+  Properties:
+    VpcId: !Ref MyVPC
+    SecurityGroupIngress:
+      - IpProtocol: -1
+        CidrIp: 0.0.0.0/0
+    SecurityGroupEgress:
+      - IpProtocol: -1
+        CidrIp: 0.0.0.0/0
+    Tags:
+      - Key: Name
+        Value: DefaultSecurityGroup
+#################################
+
 #####Create Internet Gateway######
   InternetGateway:
     Type: AWS::EC2::InternetGateway
