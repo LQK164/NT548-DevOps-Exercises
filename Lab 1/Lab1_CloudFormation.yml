@@ -53,28 +53,12 @@ Resources:
     Properties:
       AvailabilityZone: us-east-1a  #Please insert the Availability Zone (us-east-1a, us-east-1b,...)
       VpcId: !Ref MyVPC
-      CidrBlock: 10.0.1.0/24
+      CidrBlock: !Ref PrivateSubnetCIDR
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
           Value: !Join ['', [!Ref "AWS::StackName", "-Pri-SubNet"]]
 ########################
-
-#####Default Security Group######
-DefaultSecurityGroup:
-  Type: AWS::EC2::SecurityGroup
-  Properties:
-    VpcId: !Ref MyVPC
-    SecurityGroupIngress:
-      - IpProtocol: -1
-        CidrIp: 0.0.0.0/0
-    SecurityGroupEgress:
-      - IpProtocol: -1
-        CidrIp: 0.0.0.0/0
-    Tags:
-      - Key: Name
-        Value: DefaultSecurityGroup
-#################################
 
 #####Create Internet Gateway######
   InternetGateway:
@@ -138,6 +122,9 @@ DefaultSecurityGroup:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref MyVPC
+      Tags: 
+        - Key: Name
+          Value: !Join ['', [!Ref "AWS::StackName", "-Pri-RTB"]]
   PrivateRoute:
     Type: AWS::EC2::Route
     Properties:
@@ -162,8 +149,10 @@ DefaultSecurityGroup:
           FromPort: 22
           ToPort: 22
           CidrIp:  123.250.165.100/32 # User's IP
+      Tags: 
+        - Key: Name
+          Value: !Join ['', [!Ref "AWS::StackName", "-Pub-SecGr"]]
 ################################################
-
 #####Security Group for EC2 Private Instance#####
   PrivateSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -175,6 +164,9 @@ DefaultSecurityGroup:
           FromPort: 22
           ToPort: 22
           SourceSecurityGroupId: !Ref PublicSecurityGroup
+      Tags: 
+        - Key: Name
+          Value: !Join ['', [!Ref "AWS::StackName", "-Pri-SecGr"]]
 #################################################
 
 #####Create EC2 for Public Instance#####
@@ -186,6 +178,9 @@ DefaultSecurityGroup:
       SecurityGroupIds:
         - !Ref PublicSecurityGroup
       ImageId: ami-0866a3c8686eaeeba #Insert your ID
+      Tags: 
+        - Key: Name
+          Value: !Join ['', [!Ref "AWS::StackName", "-Pub-EC2"]]
 #      Keyname: key-pair-name #Insert your key-pair
 ########################################
 
@@ -198,5 +193,8 @@ DefaultSecurityGroup:
       SecurityGroupIds:
         - !Ref PrivateSecurityGroup
       ImageId: ami-0866a3c8686eaeeba #Insert your ID
+      Tags: 
+        - Key: Name
+          Value: !Join ['', [!Ref "AWS::StackName", "-Pri-EC2"]]
 #      Keyname: key-pair-name #Insert your key-pair
 ##################################################End Resources##################################################
