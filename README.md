@@ -47,10 +47,16 @@ Lab 1: Sử dụng Terraform và Cloudformation để quản lý và triển kha
       ```console
       username@linux:~$ terraform apply
       ```
-      Kiểm tra các thông tin dịch vụ triển khai:
+  + Kiểm tra các thông tin dịch vụ triển khai:
 
       ```console
       username@linux:~$ terraform show
       ```
+
+  + Xóa các dịch vụ khi không còn dùng tới:
+
+      ```console
+      username@linux:~$ terraform destroy
+      ``` 
 
 
