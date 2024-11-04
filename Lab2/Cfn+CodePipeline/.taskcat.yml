@@ -1,0 +1,13 @@
+project:
+  name:  lab2-cfn-check
+  regions:
+    - us-east-1  # Add any additional regions you want to test
+
+tests:
+  MyTest:
+    template: Lab1_CloudFormation.yml
+    parameters:
+      EnvironmentName: TestEnvironment
+      VpcCIDR: 10.0.0.0/16
+      PublicSubnetCIDR: 10.0.0.0/24
+      PrivateSubnetCIDR: 10.0.1.0/24
