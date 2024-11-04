@@ -1,0 +1,14 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      python: 3.x
+    commands:
+      - pip install cfn-lint
+      - pip install taskcat
+  pre_build:
+    commands:
+      - cfn-lint Lab1_CloudFormation.yaml  # Thay "your_template.yaml" với tên file CloudFormation của bạn
+  build:
+    commands:
+      - taskcat test run
