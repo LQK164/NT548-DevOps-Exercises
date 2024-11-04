@@ -38,20 +38,27 @@ Resources:
   PublicSubnet:
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: us-east-1a # Please insert the Availability Zone (us-east-1a, us-east-1b,...)
+      AvailabilityZone: 
+        Fn::Select: 
+        - 0
+        - Fn::GetAZs: ""
       VpcId: !Ref MyVPC
       CidrBlock: !Ref PublicSubnetCIDR
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
           Value: !Join ['', [!Ref "AWS::StackName", "-Pub-SubNet"]]
+          
 #######################      
 
 #####Private Subnet#####
   PrivateSubnet:
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: us-east-1a  #Please insert the Availability Zone (us-east-1a, us-east-1b,...)
+      AvailabilityZone: 
+        Fn::Select: 
+        - 0
+        - Fn::GetAZs: ""
       VpcId: !Ref MyVPC
       CidrBlock: !Ref PrivateSubnetCIDR
       MapPublicIpOnLaunch: false
