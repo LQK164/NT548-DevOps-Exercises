@@ -8,7 +8,7 @@ phases:
       - pip install taskcat
   pre_build:
     commands:
-      - cfn-lint Lab1_CloudFormation.yaml  # Thay "your_template.yaml" với tên file CloudFormation của bạn
+      - cfn-lint Lab1_CloudFormation.yaml
   build:
     commands:
       - taskcat test run
