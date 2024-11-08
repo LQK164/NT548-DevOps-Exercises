@@ -1,10 +1,18 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: Using Cloudformation to manage and deploy the AWS Infrastructure
 
-##################################################Parameters##################################################
 Parameters:
   EnvironmentName:
     Description: An environment name that will be prefixed to resource names
+    Type: String
+    AllowedPattern: '[A-Za-z0-9-]+'
+  GitHubOAuthTokenSecretName:
+    Type: String
+  GitHubRepositoryOwner:
+    Description: Enter GitHub username of the repository owner
+    Type: String
+  GitHubRepository:
+    Description: Enter the repository name that should be monitored for changes
     Type: String
   VpcCIDR: 
     Description: Please enter the IP range (CIDR notation) for this VPC
@@ -18,9 +26,7 @@ Parameters:
     Description: Please enter the IP range (CIDR notation) for the private subnet in the Availability Zone
     Type: String
     Default: 10.0.1.0/24
-##################################################End Parameters##################################################
 
-##################################################Resources##################################################
 Resources:
 #####Create VPC#####
   MyVPC:
@@ -32,7 +38,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Ref EnvironmentName
-####################
 
 #####Public Subnet#####
   PublicSubnet:
@@ -49,7 +54,7 @@ Resources:
         - Key: Name
           Value: !Join ['', [!Ref "AWS::StackName", "-Pub-SubNet"]]
           
-#######################      
+  
 
 #####Private Subnet#####
   PrivateSubnet:
@@ -65,23 +70,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join ['', [!Ref "AWS::StackName", "-Pri-SubNet"]]
-########################
-
-#####Default Security Group######
-# DefaultSecurityGroup:
-#    Type: AWS::EC2::SecurityGroup
-#    Properties:
-#      VpcId: !Ref MyVPC
-#      SecurityGroupIngress:
-#        - IpProtocol: -1
-#          CidrIp: 0.0.0.0/0
-#      SecurityGroupEgress:
-#        - IpProtocol: -1
-#          CidrIp: 0.0.0.0/0
-#      Tags:
-#        - Key: Name
-#         Value: !Join ['', [!Ref "AWS::StackName", "VPC-Security-Group"]]
-#################################
 
 #####Create Internet Gateway######
   InternetGateway:
@@ -91,7 +79,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join ['', [!Ref "AWS::StackName", "-IGW"]]
-##################################
 
 #####Attach Internet Gateway to VPC#####
   AttachGateway:
@@ -99,7 +86,6 @@ Resources:
     Properties:
       VpcId: !Ref MyVPC
       InternetGatewayId: !Ref InternetGateway
-########################################
 
 #####Create NAT Gateway#####
   ElasticIP:
@@ -117,7 +103,6 @@ Resources:
       Tags: 
         - Key: Name
           Value: !Join ['', [!Ref "AWS::StackName", "-NGW"]]
-############################
 
 #####Create Public Route Table#####
   PublicRouteTable:
@@ -138,7 +123,6 @@ Resources:
     Properties:
       SubnetId: !Ref PublicSubnet
       RouteTableId: !Ref PublicRouteTable
-####################################
 
 #####Create Private Route Table#####
   PrivateRouteTable:
@@ -159,7 +143,6 @@ Resources:
     Properties:
       SubnetId: !Ref PrivateSubnet
       RouteTableId: !Ref PrivateRouteTable
-####################################
 
 #####Security Group for EC2 Public Instance#####
   PublicSecurityGroup:
@@ -175,7 +158,7 @@ Resources:
       Tags: 
         - Key: Name
           Value: !Join ['', [!Ref "AWS::StackName", "-Pub-SecGr"]]
-################################################
+
 #####Security Group for EC2 Private Instance#####
   PrivateSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -190,7 +173,6 @@ Resources:
       Tags: 
         - Key: Name
           Value: !Join ['', [!Ref "AWS::StackName", "-Pri-SecGr"]]
-#################################################
 
 #####Create EC2 for Public Instance#####
   myEC2InstancePublic:
@@ -204,8 +186,6 @@ Resources:
       Tags: 
         - Key: Name
           Value: !Join ['', [!Ref "AWS::StackName", "-Pub-EC2"]]
-#      Keyname: key-pair-name #Insert your key-pair
-########################################
 
 #####Create EC2 for Private Instance#####
   myEC2InstancePrivate:
@@ -219,5 +199,110 @@ Resources:
       Tags: 
         - Key: Name
           Value: !Join ['', [!Ref "AWS::StackName", "-Pri-EC2"]]
-#      Keyname: key-pair-name #Insert your key-pair
-##################################################End Resources##################################################
+
+#####S3Bucket#####
+  ArtifactS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join
+        - '-'
+        - - codebuild
+          - !Ref ApplicationName
+
+#####CodeBuild Role#####
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: !Sub '${ApplicationName}-CodeBuild-Pipeline'
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+#####CodeBuild IAM#####
+  CodeBuildIAMPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: !Sub '${ApplicationName}-CodeBuildPolicy-Pipeline'
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Resource:
+              - '*'
+            Action:
+              - 'logs:CreateLogGroup'
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+
+          - Effect: Allow
+            Resource:
+              - !Join
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref ArtifactS3Bucket
+                  - /*
+            Action:
+              - 's3:GetObject'
+              - 's3:GetObjectVersion'
+              - 's3:PutObject'
+          - Effect: Allow
+            Resource:
+              - !Sub >-
+                arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:github-token-*
+            Action:
+              - 'secretsmanager:GetSecretValue'
+          - Effect: Allow
+            Resource:
+              - '*'
+            Action:
+              - 'cloudformation:*'
+          - Effect: Allow
+            Resource:
+              - '*'
+            Action:
+              - 'iam:*'
+              - 'vpc:*'
+              - 'kms:*'
+              - 's3:*'
+              - 'codebuild:*'
+              - 'codepipeline:*'
+              - 'events:*'
+              - 'ec2:*'
+      Roles:
+        - !Ref CodeBuildRole
+#####CodeBuild Project#####
+  Codebuild:
+    Type: AWS::Codebuild::Project
+    Properties:
+      Name: !Sub '${ApplicationName}'
+      Description: !Sub 'Build project of ${ApplicationName} '
+      Source:
+        BuildSpec: 'build-config/build-spec.yml'
+        GitCloneDepth: 1
+        GitSubmodulesConfig:
+          FetchSubmodules: false
+        InsecureSsl: false
+        Location: !Sub https://github.com/${GitHubRepositoryOwner}/${GitHubRepository}
+        ReportBuildStatus: false
+        Type: 'GITHUB'
+      SourceVersion: !Sub refs/heads/master
+      Artifacts:
+        Type: 'NO_ARTIFACTS'
+      Cache:
+        Type: 'NO_CACHE'
+      ServiceRole: !Ref CodeBuildRole
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: false
+        Image: 'aws/codebuild/standard:5.0'
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+          - Name: STACK
+            Type: 'PLAINTEXT'
+            Value: none
+          - Name: STACKTYPE
+            Type: 'PLAINTEXT'
+            Value: pipeline
