@@ -8,20 +8,8 @@ terraform {
   required_version = ">= 0.13"
 }
 
-variable "aws_access_key_id" {
-  description = "The AWS access key ID"
-  type        = string
-}
-
-variable "aws_secret_access_key" {
-  description = "The AWS secret access key"
-  type        = string
-}
-
 provider "aws" {
   region = "us-east-1"
-  access_key = var.aws_access_key_id
-  secret_key = var.aws_secret_access_key
 }
 
 # Tạo VPC
@@ -33,12 +21,45 @@ resource "aws_vpc" "my_vpc" {
   }
 }
 
+resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
+  name = "VPCFlowLogs"
+  kms_key_id = "7677fa5d-4338-4ca6-8c14-776c274ad23a"
+  retention_in_days = 365  #Keep logs in 1 year
+}
+
+resource "aws_flow_log" "flow_log" {
+  #iam_role_arn = ""
+  log_destination = aws_cloudwatch_log_group.vpc_flow_logs.arn
+  traffic_type = "ALL"
+  vpc_id = aws_vpc.my_vpc.id
+
+  depends_on = [aws_cloudwatch_log_group.vpc_flow_logs]
+}
+
+#Security Group for VPC
+resource "aws_default_security_group" "vpc_security_group" {
+  vpc_id = aws_vpc.my_vpc.id
+#  ingress {
+#    protocol = "-1"
+#    from_port = 0
+#    to_port = 0
+#    self = true
+#  }
+#  egress {
+#   protocol = "-1"
+#    from_port = 0
+#    to_port = 0
+#    cidr_blocks = [ "0.0.0.0/0" ]
+#  }
+}
+
+
 # Tạo Public Subnet
 resource "aws_subnet" "public_subnet" {
   vpc_id                  = aws_vpc.my_vpc.id
   cidr_block              = "10.0.1.0/24"
   availability_zone       = "us-east-1a"
-  map_public_ip_on_launch = true
+  #map_public_ip_on_launch = true
 
   tags = {
     Name = "Nhom11-PubSub"
@@ -131,7 +152,16 @@ resource "aws_instance" "public_ec2" {
   instance_type   = "t2.micro"
   subnet_id       = aws_subnet.public_subnet.id
   security_groups = [aws_security_group.public_sg.id]
-
+  monitoring = true
+  ebs_optimized = true
+  iam_instance_profile = "EMR_EC2_DefaultRole"
+  root_block_device {
+    encrypted     = true
+  }
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+  }
   tags = {
     Name = "Nhom11-PubEC2"
   }
@@ -143,7 +173,16 @@ resource "aws_instance" "private_ec2" {
   instance_type   = "t2.micro"
   subnet_id       = aws_subnet.private_subnet.id
   security_groups = [aws_security_group.private_sg.id]
-
+  monitoring = true
+  ebs_optimized = true
+  iam_instance_profile = "EMR_EC2_DefaultRole"
+  root_block_device {
+    encrypted     = true
+  }
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+  }
   tags = {
     Name = "Nhom11-PriEC2"
   }
@@ -152,13 +191,16 @@ resource "aws_instance" "private_ec2" {
 # Tạo Security Group cho Public EC2
 resource "aws_security_group" "public_sg" {
   vpc_id = aws_vpc.my_vpc.id
+  description = "Security Group for Public EC2"
   ingress {
+    description = "Block an IP random"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["123.250.165.100/32"]
   }
   egress {
+    description = " "
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -172,13 +214,16 @@ resource "aws_security_group" "public_sg" {
 # Tạo Security Group cho Private EC2
 resource "aws_security_group" "private_sg" {
   vpc_id = aws_vpc.my_vpc.id
+  description = "Security Group for Private EC2"
   ingress {
+    description = "Using SSH to access the Internet"
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
     security_groups = [aws_security_group.public_sg.id]
   }
   egress {
+    description = " "
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
