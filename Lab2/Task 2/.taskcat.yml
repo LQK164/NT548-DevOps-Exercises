@@ -4,8 +4,8 @@ project:
     - us-east-1  # Add any additional regions you want to test
 
 tests:
-  MyTest:
-    template: Lab1_CloudFormation.yml
+  testcfn:
+    template: ./Lab1_CloudFormation.yml
     parameters:
       EnvironmentName: TestEnvironment
       VpcCIDR: 10.0.0.0/16

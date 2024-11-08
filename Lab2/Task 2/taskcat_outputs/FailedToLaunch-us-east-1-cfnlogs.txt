@@ -1,0 +1,1 @@
+An error occurred (ValidationError) when calling the CreateStack operation: 1 validation error detected: Value 'tCaT-lab2-cfn-check-test_cfn-390054ed17f24c8780dfccecf6572337' at 'stackName' failed to satisfy constraint: Member must satisfy regular expression pattern: [a-zA-Z][-a-zA-Z0-9]*
