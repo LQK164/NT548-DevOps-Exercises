@@ -8,7 +8,7 @@ phases:
       - pip install taskcat
   pre_build:
     commands:
-      - cfn-lint Lab1_CloudFormation.yaml
+      - cfn-lint CloudFormation.yaml
   build:
     commands:
       - taskcat test run

@@ -21,9 +21,12 @@ resource "aws_vpc" "my_vpc" {
   }
 }
 
+resource "aws_kms_key" "example" {
+  description = "Example KMS key for CloudWatch Logs"
+}
 resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
   name = "VPCFlowLogs"
-  kms_key_id = "7677fa5d-4338-4ca6-8c14-776c274ad23a"
+  kms_key_id = aws_kms_key.example.arn
   retention_in_days = 365  #Keep logs in 1 year
 }
 
