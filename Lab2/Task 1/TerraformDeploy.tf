@@ -23,6 +23,42 @@ resource "aws_vpc" "my_vpc" {
 
 resource "aws_kms_key" "example" {
   description = "Example KMS key for CloudWatch Logs"
+  enable_key_rotation    = true
+  is_enabled = true
+  policy      = <<POLICY
+  {
+    "Version": "2012-10-17",
+    "Id": "key-consolepolicy-3",
+    "Statement": [
+        {
+            "Sid": "Enable IAM User Permissions",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::211125766710:root"
+            },
+            "Action": "kms:*",
+            "Resource": "*"
+        },
+        {
+            "Sid": "Allow access for Key Administrators",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::211125766710:role/admin",
+                    "arn:aws:iam::211125766710:user/cloud_user"
+                ]
+            },
+            "Action": [
+                "kms:Encrypt",
+                "kms:Decrypt",
+                "kms:DescribeKey",
+                "kms:GenerateDataKey"
+            ],
+            "Resource": "arn:aws:kms:us-east-1:211125766710:key/d9cd4955-8b8b-4f9e-b51b-ca85a5eb12f9"
+        }
+    ]
+  }
+POLICY
 }
 resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
   name = "VPCFlowLogs"
