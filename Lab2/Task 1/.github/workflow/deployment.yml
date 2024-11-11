@@ -39,7 +39,7 @@ jobs:
         checkov --version
     
     - name: "Test Terraform code"
-      run: checkov --file Lab1_Terraform.tf
+      run: checkov --file TerraformDeploy.tf
 
     - name: 'Terraform Init'
       run: terraform init
