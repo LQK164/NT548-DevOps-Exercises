@@ -1,4 +1,5 @@
 # NT548-DevOps-Exercises
+## Lab 1: Sử dụng Terraform và Cloudformation để quản lý và triển khai cơ sở hạ tầng AWS
 Lab 1: Sử dụng Terraform và Cloudformation để quản lý và triển khai cơ sở hạ tầng AWS
 
 + Các dịch vụ cần triển khai: VPC, Route Tables, Nat Gateway, EC2, Security Groups
@@ -59,4 +60,5 @@ Lab 1: Sử dụng Terraform và Cloudformation để quản lý và triển kha
       username@linux:~$ terraform destroy
       ``` 
 
+## Lab 2: Quản lý và triển khai hạ tầng AWS và ứng dụng microservices với Terraform, CloudFormation, GitHub Actions, AWS CodePipeline và Jenkins
 
