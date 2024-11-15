@@ -31,6 +31,27 @@ Resources:
         - Key: Name
           Value: !Ref EnvironmentName
 
+##### Default Security Group for VPC #####
+  DefaultSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Default security group for the VPC
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 10.0.0.0/16
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Join ['', [!Ref "AWS::StackName", "-Default-SG"]]
+
+
 #####Public Subnet#####
   PublicSubnet:
     Type: AWS::EC2::Subnet
