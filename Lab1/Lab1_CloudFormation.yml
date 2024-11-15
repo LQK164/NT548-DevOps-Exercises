@@ -1,0 +1,200 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Using Cloudformation to manage and deploy the AWS Infrastructure
+
+##################################################Parameters##################################################
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+  VpcCIDR: 
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 10.0.0.0/16
+  PublicSubnetCIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the Availability Zone
+    Type: String
+    Default: 10.0.0.0/24
+  PrivateSubnetCIDR:
+    Description: Please enter the IP range (CIDR notation) for the private subnet in the Availability Zone
+    Type: String
+    Default: 10.0.1.0/24
+##################################################End Parameters##################################################
+
+##################################################Resources##################################################
+Resources:
+#####Create VPC#####
+  MyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Ref EnvironmentName
+####################
+
+#####Public Subnet#####
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: us-east-1a # Please insert the Availability Zone (us-east-1a, us-east-1b,...)
+      VpcId: !Ref MyVPC
+      CidrBlock: !Ref PublicSubnetCIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join ['', [!Ref "AWS::StackName", "-Pub-SubNet"]]
+#######################      
+
+#####Private Subnet#####
+  PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: us-east-1a  #Please insert the Availability Zone (us-east-1a, us-east-1b,...)
+      VpcId: !Ref MyVPC
+      CidrBlock: !Ref PrivateSubnetCIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join ['', [!Ref "AWS::StackName", "-Pri-SubNet"]]
+########################
+
+#####Create Internet Gateway######
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: MyVPC 
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join ['', [!Ref "AWS::StackName", "-IGW"]]
+##################################
+
+#####Attach Internet Gateway to VPC#####
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref MyVPC
+      InternetGatewayId: !Ref InternetGateway
+########################################
+
+#####Create NAT Gateway#####
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Join ['', [!Ref "AWS::StackName", "-NGW-EIP"]]                    
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      AllocationId: !GetAtt ElasticIP.AllocationId
+      Tags: 
+        - Key: Name
+          Value: !Join ['', [!Ref "AWS::StackName", "-NGW"]]
+############################
+
+#####Create Public Route Table#####
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVPC
+      Tags: 
+        - Key: Name
+          Value: !Join ['', [!Ref "AWS::StackName", "-Pub-RTB"]]
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+####################################
+
+#####Create Private Route Table#####
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVPC
+      Tags: 
+        - Key: Name
+          Value: !Join ['', [!Ref "AWS::StackName", "-Pri-RTB"]]
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+  PrivateSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet
+      RouteTableId: !Ref PrivateRouteTable
+####################################
+
+#####Security Group for EC2 Public Instance#####
+  PublicSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH access to Public EC2
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp:  123.250.165.100/32 # User's IP
+      Tags: 
+        - Key: Name
+          Value: !Join ['', [!Ref "AWS::StackName", "-Pub-SecGr"]]
+################################################
+#####Security Group for EC2 Private Instance#####
+  PrivateSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH from Public EC2
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref PublicSecurityGroup
+      Tags: 
+        - Key: Name
+          Value: !Join ['', [!Ref "AWS::StackName", "-Pri-SecGr"]]
+#################################################
+
+#####Create EC2 for Public Instance#####
+  myEC2InstancePublic:
+    Type: AWS::EC2::Instance
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      InstanceType: t2.micro #Change another type if you want
+      SecurityGroupIds:
+        - !Ref PublicSecurityGroup
+      ImageId: ami-0866a3c8686eaeeba #Insert your ID
+      Tags: 
+        - Key: Name
+          Value: !Join ['', [!Ref "AWS::StackName", "-Pub-EC2"]]
+#      Keyname: key-pair-name #Insert your key-pair
+########################################
+
+#####Create EC2 for Private Instance#####
+  myEC2InstancePrivate:
+    Type: AWS::EC2::Instance
+    Properties:
+      SubnetId: !Ref PrivateSubnet
+      InstanceType: t2.micro #Insert your type
+      SecurityGroupIds:
+        - !Ref PrivateSecurityGroup
+      ImageId: ami-0866a3c8686eaeeba #Insert your ID
+      Tags: 
+        - Key: Name
+          Value: !Join ['', [!Ref "AWS::StackName", "-Pri-EC2"]]
+#      Keyname: key-pair-name #Insert your key-pair
+##################################################End Resources##################################################

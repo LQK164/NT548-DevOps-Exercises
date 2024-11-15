@@ -45,8 +45,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join ['', [!Ref "AWS::StackName", "-Pub-SubNet"]]
-          
-  
 
 #####Private Subnet#####
   PrivateSubnet:
