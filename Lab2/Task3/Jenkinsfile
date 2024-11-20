@@ -1,0 +1,117 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_COMPOSE_FILE = 'docker-compose-local.yml'
+    }
+    stages {
+        stage("Fetch code") {
+            steps {
+                git branch: 'main', url: 'https://github.com/navtuan12/microservice-docker.git'
+            }
+        }
+        stage('Build with Maven') {
+            steps {
+                script {
+                    // Define service directories based on your structure
+                    def services = ['config-server', 'discovery-server', 'employee-service', 'organization-service']
+                    services.each { service ->
+                        dir("${service}") {
+                            sh './mvnw clean package -DskipTests' // Adjust if tests should not be skipped
+                        }
+                    }
+                }
+            }
+        }
+        stage('Build Docker Images') {
+            steps {
+                script {
+                    // Build the Docker images for each service
+                    def services = ['config-server', 'discovery-server', 'employee-service', 'organization-service'] // Update with your service names
+                    services.each { service ->
+                        sh "docker build -t 172.26.195.46:8082/repository/nexus-docker-repo/${service}:${env.BUILD_ID} ./${service}" 
+                    }
+                }
+            }
+        }
+        stage("Sonar Analysis") {
+            environment {
+                scannerHome = tool 'sonar6.0'
+            }
+
+            steps {
+                withSonarQubeEnv('sonar') {
+                    script {
+                        // Define services to analyze
+                        def services = ['config-server', 'discovery-server', 'employee-service', 'organization-service']
+
+                        // Loop through each service for SonarQube analysis
+                        services.each { service ->
+                            echo "Running SonarQube analysis for ${service}"
+                            sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=${service} \
+                            -Dsonar.projectName=${service} \
+                            -Dsonar.projectVersion=1.0 \
+                            -Dsonar.sources=${service}/src/main/java \
+                            -Dsonar.java.binaries=${service}/target/classes \
+                            -Dsonar.java.coveragePlugin=jacoco \
+                            -Dsonar.junit.reportPaths=${service}/target/surefire-reports \
+                            -Dsonar.jacoco.reportPaths=${service}/target/jacoco.exec \
+                            -Dsonar.java.checkstyle.reportPaths=${service}/target/checkstyle-result.xml
+                            """
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Push Docker Images to Local Registry') {
+            steps{
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'nexuslogin', passwordVariable: 'PSW', usernameVariable: 'USER')]){
+                        sh "echo ${PSW} | docker login -u ${USER} --password-stdin http://172.26.195.46:8082"
+                        def services = ['config-server', 'discovery-server', 'employee-service', 'organization-service'] // Update with your service names
+                        services.each { service ->
+                            sh "docker push 172.26.195.46:8082/repository/nexus-docker-repo/${service}:${env.BUILD_ID}"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Deploy with Docker Compose') {
+            steps {
+                script {
+                     try {
+                        // Stop and remove any existing containers
+                        sh 'docker compose -f docker-compose-local.yml down'
+                    } catch (Exception e) {
+                        echo 'No existing containers to stop.'
+                    }
+
+                    try {
+                        // Pull the latest images (will fail gracefully if images do not exist yet)
+                        sh 'docker compose -f docker-compose-local.yml pull'
+                    } catch (Exception e) {
+                        echo 'No images found in the registry, proceeding with local builds.'
+                    }
+                    sh 'docker compose -f docker-compose-local.yml up -d --build --force-recreate --remove-orphans'
+                }
+            }
+        }
+    }
+
+    // post {
+    //     always {
+    //         // Clean up Docker images and containers after the pipeline finishes
+    //         sh 'docker rmi -'
+    //     }
+    //     success {
+    //         echo 'Deployment successful!'
+    //     }
+    //     failure {
+    //         echo 'Deployment failed!'
+    //     }
+    // }
+}
